@@ -1,22 +1,6 @@
-import argparse
-import json
+import logging
 
 from vedirect_m8.vedirect import Vedirect
-
-
-def parse_arguments() -> argparse.Namespace:
-    parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        prog="VE.Direct",
-        description="Victron VE.Direct python implementation",
-    )
-    parser.add_argument(
-        "port",
-        type=str,
-        help="Path to serial port",
-    )
-
-    return parser.parse_args()
-
 
 cs_mapping: dict[str, str] = {
     "0": "Off",
@@ -74,7 +58,7 @@ err_mapping: dict[str, str] = {
 unknown = "Unknown"
 
 
-def prepare_data_callback(packet):
+def map_keys(packet) -> dict[str, int | float | str]:
     data = {}
     for key, value in packet.items():
         match key:
@@ -83,30 +67,30 @@ def prepare_data_callback(packet):
                 data["Product ID"] = value
             case "FW":
                 # Meaning can be found in https://www.victronenergy.com/upload/documents/VE.Direct-Protocol-3.33.pdf
-                data["Firmware version"] = value
+                data["Firmware version"] = int(value) / 100
             case "SER#":
                 # Meaning can be found in https://www.victronenergy.com/upload/documents/VE.Direct-Protocol-3.33.pdf
                 data["Serial number"] = value
             case "V":
-                data["Channel 1 voltage (V)"] = int(value) * 0.01
+                data["Channel 1 voltage (V)"] = int(value) * 0.001
             case "I":
-                data["Channel 1 current (A)"] = int(value) * 0.01
+                data["Channel 1 current (A)"] = int(value) * 0.001
             case "VPV":
-                data["Input Voltage (V)"] = int(value) * 0.01
+                data["Input Voltage (V)"] = int(value) * 0.001
             case "PPV":
-                data["Input current"] = int(value) * 0.01
+                data["Input power (W)"] = int(value)
             case "IL":
-                data["Load output actual current"] = int(value) * 0.01
+                data["Load output actual current"] = int(value) * 0.001
             case "H19":
-                data["Yield total"] = float(value)
+                data["Yield total (kWh)"] = float(value) * 0.01
             case "H20":
-                data["Yield today"] = float(value)
+                data["Yield today (kWh)"] = float(value) * 0.01
             case "H21":
-                data["Maximum power today"] = int(value)
+                data["Maximum power today (W)"] = int(value)
             case "H22":
-                data["Yield yesterday"] = float(value)
+                data["Yield yesterday (kWh)"] = float(value) * 0.01
             case "H23":
-                data["Maximum power yesterday"] = int(value)
+                data["Maximum power yesterday (W)"] = int(value)
             case "HSDS":
                 data["Day sequence number"] = int(value)
             case "CS":
@@ -120,16 +104,15 @@ def prepare_data_callback(packet):
             case "LOAD":
                 data["Load output status"] = "On" if value == "0" else "Off"
             case _:
-                print(f"Key is not known [{key=}, {value=}]")
+                logging.warning("Key is not known [{key=%s}, {value=%s}]", key, value)
+                data[key] = value
 
-    print(json.dumps(data))
-
-
-def cli():
-    args: argparse.Namespace = parse_arguments()
-    ve = Vedirect(serial_conf={"serial_port": args.port}, max_packet_blocks=None)
-    ve.read_data_callback(prepare_data_callback, max_loops=1)
+    return data
 
 
-if __name__ == "__main__":
-    cli()
+def query_device(serial_port: str = "/dev/ttyUSB0") -> dict[str, int | float | str]:
+    ve = Vedirect(serial_conf={"serial_port": serial_port}, max_packet_blocks=None)
+
+    packet = ve.read_global_packet()
+    data = map_keys(packet)
+    return data
