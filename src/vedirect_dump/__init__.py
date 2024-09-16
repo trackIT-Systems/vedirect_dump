@@ -61,51 +61,52 @@ unknown = "Unknown"
 def map_keys(packet) -> dict[str, int | float | str]:
     data = {}
     for key, value in packet.items():
-        match key:
-            case "PID":
-                # Meaning can be found in https://www.victronenergy.com/upload/documents/VE.Direct-Protocol-3.33.pdf
-                data["Product ID"] = value
-            case "FW":
-                # Meaning can be found in https://www.victronenergy.com/upload/documents/VE.Direct-Protocol-3.33.pdf
-                data["Firmware version"] = int(value) / 100
-            case "SER#":
-                # Meaning can be found in https://www.victronenergy.com/upload/documents/VE.Direct-Protocol-3.33.pdf
-                data["Serial number"] = value
-            case "V":
-                data["Channel 1 voltage (V)"] = int(value) * 0.001
-            case "I":
-                data["Channel 1 current (A)"] = int(value) * 0.001
-            case "VPV":
-                data["Input Voltage (V)"] = int(value) * 0.001
-            case "PPV":
-                data["Input power (W)"] = int(value)
-            case "IL":
-                data["Load output actual current"] = int(value) * 0.001
-            case "H19":
-                data["Yield total (kWh)"] = float(value) * 0.01
-            case "H20":
-                data["Yield today (kWh)"] = float(value) * 0.01
-            case "H21":
-                data["Maximum power today (W)"] = int(value)
-            case "H22":
-                data["Yield yesterday (kWh)"] = float(value) * 0.01
-            case "H23":
-                data["Maximum power yesterday (W)"] = int(value)
-            case "HSDS":
-                data["Day sequence number"] = int(value)
-            case "CS":
-                data["Operation state"] = cs_mapping.get(value, unknown)
-            case "MPPT":
-                data["Tracker operation mode"] = mppt_mapping.get(value, unknown)
-            case "OR":
-                data["Off reason"] = or_mapping.get(value, unknown)
-            case "ERR":
-                data["Error code"] = err_mapping.get(value, unknown)
-            case "LOAD":
-                data["Load output status"] = "On" if value == "0" else "Off"
-            case _:
-                logging.warning("Key is not known [{key=%s}, {value=%s}]", key, value)
-                data[key] = value
+        try:
+            # Meanings can be found in https://www.victronenergy.com/upload/documents/VE.Direct-Protocol-3.33.pdf
+            match key:
+                case "PID":
+                    data["Product ID"] = value
+                case "FW":
+                    data["Firmware version"] = int(value) / 100
+                case "SER#":
+                    data["Serial number"] = value
+                case "V":
+                    data["Channel 1 voltage (V)"] = int(value) * 0.001
+                case "I":
+                    data["Channel 1 current (A)"] = int(value) * 0.001
+                case "VPV":
+                    data["Input Voltage (V)"] = int(value) * 0.001
+                case "PPV":
+                    data["Input power (W)"] = int(value)
+                case "IL":
+                    data["Load output actual current"] = int(value) * 0.001
+                case "H19":
+                    data["Yield total (kWh)"] = float(value) * 0.01
+                case "H20":
+                    data["Yield today (kWh)"] = float(value) * 0.01
+                case "H21":
+                    data["Maximum power today (W)"] = int(value)
+                case "H22":
+                    data["Yield yesterday (kWh)"] = float(value) * 0.01
+                case "H23":
+                    data["Maximum power yesterday (W)"] = int(value)
+                case "HSDS":
+                    data["Day sequence number"] = int(value)
+                case "CS":
+                    data["Operation state"] = cs_mapping.get(value, unknown)
+                case "MPPT":
+                    data["Tracker operation mode"] = mppt_mapping.get(value, unknown)
+                case "OR":
+                    data["Off reason"] = or_mapping.get(value, unknown)
+                case "ERR":
+                    data["Error code"] = err_mapping.get(value, unknown)
+                case "LOAD":
+                    data["Load output status"] = "On" if value == "0" else "Off"
+                case _:
+                    logging.warning("Key is not known [{key=%s}, {value=%s}]", key, value)
+                    data[key] = value
+        except Exception as ex:
+            logging.warning("Exception parsing value [{key=%s}, {value=%s}], %s", key, value, ex)
 
     return data
 
