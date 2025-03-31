@@ -1,4 +1,5 @@
 import logging
+import time
 
 from vedirect_m8.vedirect import Vedirect
 
@@ -111,9 +112,27 @@ def map_keys(packet) -> dict[str, int | float | str]:
     return data
 
 
-def query_device(serial_port: str = "/dev/ttyUSB0") -> dict[str, int | float | str]:
+def query_device(serial_port: str = "/dev/ttyUSB0", retries=3) -> dict[str, int | float | str]:
     ve = Vedirect(serial_conf={"serial_port": serial_port}, max_packet_blocks=None)
+    retry = 0
+    while retry < retries:
+        try:
+            packet = ve.read_global_packet()
+            if not packet:
+                retry += 1
+                logging.warning("No Data on try %s/%s", retry, retries)
+                continue
 
-    packet = ve.read_global_packet()
-    data = map_keys(packet)
-    return data
+            data: dict[str, int | float | str] = map_keys(packet)
+            return data
+        except Exception as ex:
+            retry += 1
+            logging.warning("Exception on try %s/%s: %s", retry, retries, ex)
+
+            if retry >= retries:
+                raise ex
+
+            # sleep to wait for more serial data
+            time.sleep(1)
+
+    raise RuntimeError("No tries have been allowed for queryin the device. Please adjust retries parameter.")
