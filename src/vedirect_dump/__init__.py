@@ -64,6 +64,9 @@ unknown = "Unknown"
 def map_keys(packet) -> dict[str, int | float | str]:
     data = {}
     for key, value in packet.items():
+        # trim null-terminated strings
+        value = value.split("\x00")[0]
+
         try:
             # Meanings can be found in https://www.victronenergy.com/upload/documents/VE.Direct-Protocol-3.33.pdf
             match key:
