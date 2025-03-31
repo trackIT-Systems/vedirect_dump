@@ -3,6 +3,8 @@ import time
 
 from vedirect_m8.vedirect import Vedirect
 
+logger = logging.getLogger(__name__)
+
 cs_mapping: dict[str, str] = {
     "0": "Off",
     "2": "Fault",
@@ -104,10 +106,10 @@ def map_keys(packet) -> dict[str, int | float | str]:
                 case "LOAD":
                     data["Load output status"] = "On" if value == "0" else "Off"
                 case _:
-                    logging.warning("Key is not known [{key=%s}, {value=%s}]", key, value)
+                    logger.warning("Key is not known [{key=%s}, {value=%s}]", key, value)
                     data[key] = value
         except Exception as ex:
-            logging.warning("Exception parsing value [{key=%s}, {value=%s}], %s", key, value, ex)
+            logger.warning("Exception parsing value [{key=%s}, {value=%s}], %s", key, value, ex)
 
     return data
 
@@ -120,14 +122,14 @@ def query_device(serial_port: str = "/dev/ttyUSB0", retries=3) -> dict[str, int 
             packet = ve.read_global_packet()
             if not packet:
                 retry += 1
-                logging.warning("No Data on try %s/%s", retry, retries)
+                logger.warning("No Data on try %s/%s", retry, retries)
                 continue
 
             data: dict[str, int | float | str] = map_keys(packet)
             return data
         except Exception as ex:
             retry += 1
-            logging.warning("Exception on try %s/%s: %s", retry, retries, ex)
+            logger.warning("Exception on try %s/%s: %s", retry, retries, ex)
 
             if retry >= retries:
                 raise ex

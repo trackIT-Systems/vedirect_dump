@@ -1,8 +1,6 @@
 import argparse
 import json
 
-from vedirect_m8.vedirect import Vedirect
-
 from vedirect_dump import query_device
 
 
