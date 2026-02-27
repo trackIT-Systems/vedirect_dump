@@ -13,7 +13,7 @@ def cli():
         "-p",
         "--port",
         type=str,
-        default="/dev/ttyUSB0",
+        default="/dev/ttyUSBvd0",  # This is a custom symlink created by a udev rule to avoid race conditions with celular modems
         help="Path to serial port",
     )
 

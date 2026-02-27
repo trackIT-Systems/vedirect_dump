@@ -1,5 +1,6 @@
 import logging
 import time
+from pathlib import Path
 
 from vedirect_m8.vedirect import Vedirect
 
@@ -117,8 +118,12 @@ def map_keys(packet) -> dict[str, int | float | str]:
     return data
 
 
-def query_device(serial_port: str = "/dev/ttyUSB0", retries=3) -> dict[str, int | float | str]:
-    ve = Vedirect(serial_conf={"serial_port": serial_port}, max_packet_blocks=None)
+def query_device(serial_port: str = "/dev/ttyUSBvd0", retries=3) -> dict[str, int | float | str]:
+    # vedirect_m8 only accepts ttyUSB0, ttyACM0, etc. Resolve symlinks (e.g. /dev/ttyUSBvd0
+    # from udev) so the library gets the real device path.
+    port = str(Path(serial_port).resolve())
+    ve = Vedirect(serial_conf={"serial_port": port}, max_packet_blocks=None)
+
     retry = 0
     while retry < retries:
         try:
